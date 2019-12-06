@@ -8,10 +8,12 @@
 import sys
 import copy
 import torch
+import torch.nn as nn
 from torch.nn import Sequential, Linear, ReLU, CrossEntropyLoss
 import numpy as np
 from datasets import loaders
 from bound_layers import BoundSequential, BoundLinear, BoundConv2d, BoundDataParallel
+from torch.autograd import Variable
 import torch.optim as optim
 # from gpu_profile import gpu_profile
 import time
@@ -297,7 +299,60 @@ def Train(model, t, loader, eps_scheduler, max_eps, norm, logger, verbose, train
         if verbose or method != "natural":
             robust_ce_losses.update(robust_ce.cpu().detach().numpy(), data.size(0))
             # robust_ce_losses.update(robust_ce, data.size(0))
-            robust_errors.update(torch.sum((lb<0).any(dim=1)).cpu().detach().numpy() / data.size(0), data.size(0))
+            # correct_vec  = (torch.argmax(output, dim=1)!=labels).cpu().detach().numpy()
+            verified_vec = ((lb<0).any(dim=1)).cpu().detach().numpy()
+
+            #Projected Gradient Descent Start 
+            X = Variable(data.cuda(),requires_grad=True)
+            X_pgd = Variable(data.cuda(), requires_grad=True)
+            y = Variable(labels.cuda().long())
+            # X_pgd = data.clone().detach().requires_grad_(True).to(data.device)
+            # y = labels.clone().detach().to(labels.device)
+
+            if y.dim() == 2: 
+                y = y.squeeze(1)
+                
+            y_y=y.view(-1,1)
+            for i in range(100): 
+                #opt = optim.Adam([X_pgd], lr=1e-3)
+                #opt.zero_grad()
+                loss = nn.CrossEntropyLoss()(model(X_pgd,method_opt="forward"), y.data)
+                #loss=-(torch.gather(model(X_pgd,method_opt="forward"),1,y_y)).sum()
+                loss.backward() 
+                alpha = 1
+                eta = alpha*X_pgd.grad.data.sign()
+                X_pgd = Variable(X_pgd.data + eta, requires_grad=True)
+                # adjust to be within [-epsilon, epsilon]
+                eta = torch.clamp(X_pgd.data - data, -eps, eps)
+                X_pgd.data = X.data + eta
+                X_pgd.data = torch.clamp(X_pgd.data, 0.0, 1.0) 
+                
+            correct_vec = (model(X_pgd, method_opt="forward").data.max(1)[1] != y.data).cpu().detach().numpy()
+
+            #Projected Gradient Descent End 
+
+            correct_and_verified = 0.0
+            correct_and_unverified = 0.0
+            incorrect_and_verified = 0.0
+            incorrect_and_unverified = 0.0
+
+            for i in range(correct_vec.shape[0]):
+                if((correct_vec[i]==0) and (verified_vec[i]==0)):
+                    correct_and_verified += 1
+                elif((correct_vec[i]==0) and (verified_vec[i]==1)):
+                    correct_and_unverified += 1
+                elif((correct_vec[i]==1) and (verified_vec[i]==0)):
+                    incorrect_and_verified += 1
+                else:
+                    incorrect_and_unverified += 1
+            print('correct_v',correct_and_verified)
+            print('correct_u', correct_and_unverified)
+            print('incorrect_v',incorrect_and_verified )
+            print('incorrect_u',incorrect_and_unverified)
+            print('total',data.size(0))
+
+            robust_errors.update(correct_and_verified / data.size(0), data.size(0))            
+            robust_ce_losses.update(robust_ce.cpu().detach().numpy(), data.size(0))
 
         batch_time.update(time.time() - start)
         if i % 50 == 0 and train:
