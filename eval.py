@@ -52,9 +52,8 @@ def main(args):
         logger.log("evaluation configurations:", eval_config)
             
         logger.log("Evaluating...")
-        with torch.no_grad():
-            # evaluate
-            robust_err, err = Train(model, 0, test_data, EpsilonScheduler("linear", 0, 0, eps, eps, 1), eps, norm, logger, verbose, False, None, method, **method_param)
+        # evaluate
+        robust_err, err = Train(model, 0, test_data, EpsilonScheduler("linear", 0, 0, eps, eps, 1), eps, norm, logger, verbose, False, None, method, **method_param)
         robust_errs.append(robust_err)
         errs.append(err)
 
