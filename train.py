@@ -77,6 +77,8 @@ def Train(model, t, loader, eps_scheduler, max_eps, norm, logger, verbose, train
     else:
         model.eval()
     # pregenerate the array for specifications, will be used for scatter
+    for param in model.parameters():
+        param.requires_grad = False
     sa = np.zeros((num_class, num_class - 1), dtype = np.int32)
     for i in range(sa.shape[0]):
         for j in range(sa.shape[1]):
