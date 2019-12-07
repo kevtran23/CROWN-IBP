@@ -301,7 +301,7 @@ def Train(model, t, loader, eps_scheduler, max_eps, norm, logger, verbose, train
         if verbose or method != "natural":
             robust_ce_losses.update(robust_ce.cpu().detach().numpy(), data.size(0))
             # robust_ce_losses.update(robust_ce, data.size(0))
-            # correct_vec  = (torch.argmax(output, dim=1)!=labels).cpu().detach().numpy()
+            correct_vec  = (torch.argmax(output, dim=1)!=labels).cpu().detach().numpy()
             verified_vec = ((lb<0).any(dim=1)).cpu().detach().numpy()
 
             #Projected Gradient Descent Start 
@@ -341,7 +341,7 @@ def Train(model, t, loader, eps_scheduler, max_eps, norm, logger, verbose, train
             eta = X.grad.data.sign()*eps
    
             X_fgs = Variable(X.data + eta)
-            correct_vec = (model(X_fgs,method_opt="foward").data.max(1)[1] != labels).cpu().detach().numpy()
+            #correct_vec = (model(X_fgs,method_opt="foward").data.max(1)[1] != labels).cpu().detach().numpy()
 
             #Projected Gradient Descent End 
 
