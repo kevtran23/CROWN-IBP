@@ -341,7 +341,7 @@ def Train(model, t, loader, eps_scheduler, max_eps, norm, logger, verbose, train
             eta = X.grad.data.sign()*eps
    
             X_fgs = Variable(X.data + eta)
-            correct_vec = (model(X_fgs,method_opt="foward").data.max(1)[1] != y.data).cpu().detach().numpy()
+            correct_vec = (model(X_fgs,method_opt="foward").data.max(1)[1] != labels).cpu().detach().numpy()
 
             #Projected Gradient Descent End 
 
