@@ -338,8 +338,8 @@ def Train(model, t, loader, eps_scheduler, max_eps, norm, logger, verbose, train
 
             opt.zero_grad()
             ce.backward()
-            eta = X.grad.data.sign()*epsilon
-    
+            eta = X.grad.data.sign()*eps
+   
             X_fgs = Variable(X.data + eta)
             correct_vec = (model(X_fgs,method_opt="foward").data.max(1)[1] != y.data).cpu().detach().numpy()
 
