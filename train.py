@@ -303,31 +303,43 @@ def Train(model, t, loader, eps_scheduler, max_eps, norm, logger, verbose, train
             verified_vec = ((lb<0).any(dim=1)).cpu().detach().numpy()
 
             #Projected Gradient Descent Start 
-            X = Variable(data.cuda(),requires_grad=True)
-            X_pgd = Variable(data.cuda(), requires_grad=True)
-            y = Variable(labels.cuda().long())
-            # X_pgd = data.clone().detach().requires_grad_(True).to(data.device)
-            # y = labels.clone().detach().to(labels.device)
+#             X = Variable(data.cuda(),requires_grad=True)
+#             X_pgd = Variable(data.cuda(), requires_grad=True)
+#             y = Variable(labels.cuda().long())
+#             # X_pgd = data.clone().detach().requires_grad_(True).to(data.device)
+#             # y = labels.clone().detach().to(labels.device)
 
-            if y.dim() == 2: 
-                y = y.squeeze(1)
+#             if y.dim() == 2: 
+#                 y = y.squeeze(1)
                 
-            y_y=y.view(-1,1)
-            for i in range(100): 
-                #opt = optim.Adam([X_pgd], lr=1e-3)
-                #opt.zero_grad()
-                loss = nn.CrossEntropyLoss()(model(X_pgd,method_opt="forward"), y.data)
-                #loss=-(torch.gather(model(X_pgd,method_opt="forward"),1,y_y)).sum()
-                loss.backward() 
-                alpha = 1
-                eta = alpha*X_pgd.grad.data.sign()
-                X_pgd = Variable(X_pgd.data + eta, requires_grad=True)
-                # adjust to be within [-epsilon, epsilon]
-                eta = torch.clamp(X_pgd.data - data, -eps, eps)
-                X_pgd.data = X.data + eta
-                X_pgd.data = torch.clamp(X_pgd.data, 0.0, 1.0) 
+#             y_y=y.view(-1,1)
+#             for i in range(100): 
+#                 #opt = optim.Adam([X_pgd], lr=1e-3)
+#                 #opt.zero_grad()
+#                 loss = nn.CrossEntropyLoss()(model(X_pgd,method_opt="forward"), y.data)
+#                 #loss=-(torch.gather(model(X_pgd,method_opt="forward"),1,y_y)).sum()
+#                 loss.backward() 
+#                 alpha = 1
+#                 eta = alpha*X_pgd.grad.data.sign()
+#                 X_pgd = Variable(X_pgd.data + eta, requires_grad=True)
+#                 # adjust to be within [-epsilon, epsilon]
+#                 eta = torch.clamp(X_pgd.data - data, -eps, eps)
+#                 X_pgd.data = X.data + eta
+#                 X_pgd.data = torch.clamp(X_pgd.data, 0.0, 1.0) 
                 
-            correct_vec = (model(X_pgd, method_opt="forward").data.max(1)[1] != y.data).cpu().detach().numpy()
+#             correct_vec = (model(X_pgd, method_opt="forward").data.max(1)[1] != y.data).cpu().detach().numpy()
+              X = Variable(data.cuda(),requires_grad=True)
+              opt = optim.Adam([X], lr=1e-3)
+              out = model(X,method_opt="forward")
+              ce = nn.CrossEntropyLoss()(out, labels)
+              err = (out.data.max(1)[1] != labels).float().sum()  / X.size(0)
+
+              opt.zero_grad()
+              ce.backward()
+              eta = X.grad.data.sign()*epsilon
+    
+              X_fgs = Variable(X.data + eta)
+              correct_vec = (model(X_fgs,method_opt="foward").data.max(1)[1] != y.data).cpu().detach().numpy()
 
             #Projected Gradient Descent End 
 
@@ -350,7 +362,7 @@ def Train(model, t, loader, eps_scheduler, max_eps, norm, logger, verbose, train
             print('incorrect_v',incorrect_and_verified )
             print('incorrect_u',incorrect_and_unverified)
             print('total',data.size(0))
-
+            
             robust_errors.update(correct_and_verified / data.size(0), data.size(0))            
             robust_ce_losses.update(robust_ce.cpu().detach().numpy(), data.size(0))
 
