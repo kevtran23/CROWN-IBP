@@ -330,18 +330,18 @@ def Train(model, t, loader, eps_scheduler, max_eps, norm, logger, verbose, train
 #                 X_pgd.data = torch.clamp(X_pgd.data, 0.0, 1.0) 
                 
 #             correct_vec = (model(X_pgd, method_opt="forward").data.max(1)[1] != y.data).cpu().detach().numpy()
-              X = Variable(data.cuda(),requires_grad=True)
-              opt = optim.Adam([X], lr=1e-3)
-              out = model(X,method_opt="forward")
-              ce = nn.CrossEntropyLoss()(out, labels)
-              err = (out.data.max(1)[1] != labels).float().sum()  / X.size(0)
+             X = Variable(data.cuda(),requires_grad=True)
+             opt = optim.Adam([X], lr=1e-3)
+             out = model(X,method_opt="forward")
+             ce = nn.CrossEntropyLoss()(out, labels)
+             err = (out.data.max(1)[1] != labels).float().sum()  / X.size(0)
 
-              opt.zero_grad()
-              ce.backward()
-              eta = X.grad.data.sign()*epsilon
+             opt.zero_grad()
+             ce.backward()
+             eta = X.grad.data.sign()*epsilon
     
-              X_fgs = Variable(X.data + eta)
-              correct_vec = (model(X_fgs,method_opt="foward").data.max(1)[1] != y.data).cpu().detach().numpy()
+             X_fgs = Variable(X.data + eta)
+             correct_vec = (model(X_fgs,method_opt="foward").data.max(1)[1] != y.data).cpu().detach().numpy()
 
             #Projected Gradient Descent End 
 
